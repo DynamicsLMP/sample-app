@@ -78,6 +78,9 @@ let currentQuestion = null;
 let currentIndex = -1;
 let selectedAnswers = new Set();
 
+const nextBtn = document.querySelector('button[onclick="nextQuestion()"]');
+const submitBtn = document.querySelector('button[onclick="submitAnswer()"]');
+
 document.getElementById('fileInput').addEventListener('change', handleFile);
 
 function handleFile(event) {
@@ -114,6 +117,9 @@ function displayQuestion(q) {
     li.onclick = () => toggleSelect(li);
     choicesEl.appendChild(li);
   });
+
+  // Disable Next Question until Submit
+  nextBtn.disabled = true;
 }
 
 function toggleSelect(li) {
@@ -155,13 +161,18 @@ function submitAnswer() {
 
     if (correctSet.has(index)) li.classList.add('correct');
   }
+
+  // Enable Next Question button after submit
+  nextBtn.disabled = false;
 }
 
 function nextQuestion() {
   if (questions.length === 0) return;
+
   let newIndex;
   do { newIndex = Math.floor(Math.random() * questions.length); }
   while (newIndex === currentIndex && questions.length > 1);
+
   currentIndex = newIndex;
   currentQuestion = questions[newIndex];
   displayQuestion(currentQuestion);

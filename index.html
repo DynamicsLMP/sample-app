@@ -36,31 +36,13 @@
       align-items: center;
     }
 
-    li:hover {
-      border-color: #aaa;
-    }
+    li:hover { border-color: #aaa; }
+    .selected { background: #d0e7ff; }
+    .correct { background: #b6f5c0; }
+    .wrong { background: #ffb3b3; }
+    .result { font-weight: bold; margin-left: 10px; }
 
-    .selected {
-      background: #d0e7ff;
-    }
-
-    .correct {
-      background: #b6f5c0;
-    }
-
-    .wrong {
-      background: #ffb3b3;
-    }
-
-    .result {
-      font-weight: bold;
-      margin-left: 10px;
-    }
-
-    .controls {
-      margin-top: 15px;
-    }
-
+    .controls { margin-top: 15px; }
     button {
       padding: 10px 15px;
       margin: 5px 5px 5px 0;
@@ -70,23 +52,16 @@
       background: #333;
       color: white;
     }
+    button:hover { background: #555; }
 
-    button:hover {
-      background: #555;
-    }
-
-    #fileInput {
-      margin-bottom: 15px;
-    }
+    #fileInput { margin-bottom: 15px; }
   </style>
 </head>
 
 <body>
 
 <h2 id="question">Upload a CSV to start</h2>
-
 <input type="file" id="fileInput" accept=".csv">
-
 <ul id="choices"></ul>
 
 <div class="controls">
@@ -94,11 +69,13 @@
   <button onclick="nextQuestion()">Next Question</button>
 </div>
 
+<!-- Include PapaParse -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <script>
 let questions = [];
 let currentQuestion = null;
 let currentIndex = -1;
-
 let selectedAnswers = new Set();
 
 document.getElementById('fileInput').addEventListener('change', handleFile);
@@ -107,33 +84,22 @@ function handleFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    parseCSV(e.target.result);
-    nextQuestion();
-  };
-
-  reader.readAsText(file);
-}
-
-function parseCSV(data) {
-  const rows = data.split('\n').slice(1);
-
-  questions = rows.map(row => {
-    const [question, choices, answers] = row.split(',');
-
-    return {
-      question: question.replace(/"/g, ''),
-      choices: choices.replace(/"/g, '').split('|'),
-      answers: answers.replace(/"/g, '').split('|').map(Number)
-    };
-  }).filter(q => q.question);
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      questions = results.data.map(q => ({
+        question: q.question,
+        choices: q.choices.split('|'),
+        answers: q.answers.split('|').map(Number)
+      }));
+      nextQuestion();
+    }
+  });
 }
 
 function displayQuestion(q) {
   selectedAnswers.clear();
-
   document.getElementById('question').textContent = q.question;
 
   const choicesEl = document.getElementById('choices');
@@ -141,23 +107,17 @@ function displayQuestion(q) {
 
   q.choices.forEach((choice, index) => {
     const li = document.createElement('li');
-
     const text = document.createElement('span');
     text.textContent = choice;
-
     li.appendChild(text);
-
     li.dataset.index = index + 1;
-
     li.onclick = () => toggleSelect(li);
-
     choicesEl.appendChild(li);
   });
 }
 
 function toggleSelect(li) {
   const index = Number(li.dataset.index);
-
   if (selectedAnswers.has(index)) {
     selectedAnswers.delete(index);
     li.classList.remove('selected');
@@ -176,7 +136,6 @@ function submitAnswer() {
   for (let li of choicesEl) {
     const index = Number(li.dataset.index);
 
-    // remove old result if any
     const oldResult = li.querySelector('.result');
     if (oldResult) oldResult.remove();
 
@@ -194,25 +153,17 @@ function submitAnswer() {
       li.appendChild(resultMark);
     }
 
-    // highlight correct answers even if not selected
-    if (correctSet.has(index)) {
-      li.classList.add('correct');
-    }
+    if (correctSet.has(index)) li.classList.add('correct');
   }
 }
 
 function nextQuestion() {
   if (questions.length === 0) return;
-
   let newIndex;
-
-  do {
-    newIndex = Math.floor(Math.random() * questions.length);
-  } while (newIndex === currentIndex && questions.length > 1);
-
+  do { newIndex = Math.floor(Math.random() * questions.length); }
+  while (newIndex === currentIndex && questions.length > 1);
   currentIndex = newIndex;
   currentQuestion = questions[newIndex];
-
   displayQuestion(currentQuestion);
 }
 </script>

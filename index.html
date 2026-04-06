@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Quiz App</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h2 {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    ul {
+      padding: 0;
+    }
+
+    li {
+      list-style: none;
+      padding: 10px;
+      margin: 8px 0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li:hover {
+      border-color: #aaa;
+    }
+
+    .selected {
+      background: #d0e7ff;
+    }
+
+    .correct {
+      background: #b6f5c0;
+    }
+
+    .wrong {
+      background: #ffb3b3;
+    }
+
+    .result {
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .controls {
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px 5px 5px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #333;
+      color: white;
+    }
+
+    button:hover {
+      background: #555;
+    }
+
+    #fileInput {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2 id="question">Upload a CSV to start</h2>
+
+<input type="file" id="fileInput" accept=".csv">
+
+<ul id="choices"></ul>
+
+<div class="controls">
+  <button onclick="submitAnswer()">Submit Answer</button>
+  <button onclick="nextQuestion()">Next Question</button>
+</div>
+
+<script>
+let questions = [];
+let currentQuestion = null;
+let currentIndex = -1;
+
+let selectedAnswers = new Set();
+
+document.getElementById('fileInput').addEventListener('change', handleFile);
+
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    parseCSV(e.target.result);
+    nextQuestion();
+  };
+
+  reader.readAsText(file);
+}
+
+function parseCSV(data) {
+  const rows = data.split('\n').slice(1);
+
+  questions = rows.map(row => {
+    const [question, choices, answers] = row.split(',');
+
+    return {
+      question: question.replace(/"/g, ''),
+      choices: choices.replace(/"/g, '').split('|'),
+      answers: answers.replace(/"/g, '').split('|').map(Number)
+    };
+  }).filter(q => q.question);
+}
+
+function displayQuestion(q) {
+  selectedAnswers.clear();
+
+  document.getElementById('question').textContent = q.question;
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+
+  q.choices.forEach((choice, index) => {
+    const li = document.createElement('li');
+
+    const text = document.createElement('span');
+    text.textContent = choice;
+
+    li.appendChild(text);
+
+    li.dataset.index = index + 1;
+
+    li.onclick = () => toggleSelect(li);
+
+    choicesEl.appendChild(li);
+  });
+}
+
+function toggleSelect(li) {
+  const index = Number(li.dataset.index);
+
+  if (selectedAnswers.has(index)) {
+    selectedAnswers.delete(index);
+    li.classList.remove('selected');
+  } else {
+    selectedAnswers.add(index);
+    li.classList.add('selected');
+  }
+}
+
+function submitAnswer() {
+  if (!currentQuestion) return;
+
+  const choicesEl = document.getElementById('choices').children;
+  let correctSet = new Set(currentQuestion.answers);
+
+  for (let li of choicesEl) {
+    const index = Number(li.dataset.index);
+
+    // remove old result if any
+    const oldResult = li.querySelector('.result');
+    if (oldResult) oldResult.remove();
+
+    let resultMark = document.createElement('span');
+    resultMark.classList.add('result');
+
+    if (selectedAnswers.has(index)) {
+      if (correctSet.has(index)) {
+        li.classList.add('correct');
+        resultMark.textContent = '✔';
+      } else {
+        li.classList.add('wrong');
+        resultMark.textContent = '✖';
+      }
+      li.appendChild(resultMark);
+    }
+
+    // highlight correct answers even if not selected
+    if (correctSet.has(index)) {
+      li.classList.add('correct');
+    }
+  }
+}
+
+function nextQuestion() {
+  if (questions.length === 0) return;
+
+  let newIndex;
+
+  do {
+    newIndex = Math.floor(Math.random() * questions.length);
+  } while (newIndex === currentIndex && questions.length > 1);
+
+  currentIndex = newIndex;
+  currentQuestion = questions[newIndex];
+
+  displayQuestion(currentQuestion);
+}
+</script>
+
+</body>
+</html>
